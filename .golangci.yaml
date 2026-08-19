@@ -12,6 +12,8 @@ linters:
     - depguard
     - gochecknoglobals
     - exhaustruct
+    - wsl
+    - gomodguard
   settings:
     paralleltest:
       ignore-missing: true
@@ -53,6 +55,9 @@ linters:
         path: "^.*_test\\.go$"
       - linters:
           - maintidx
+        path: "^.*_test\\.go$"
+      - linters:
+          - goconst
         path: "^.*_test\\.go$"
 
 formatters:

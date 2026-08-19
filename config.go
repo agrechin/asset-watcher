@@ -31,7 +31,8 @@ var ConfigDefaults = Config{
 func GetConfig() *Config {
 	cfg := ConfigDefaults
 
-	if err := env.Parse(&cfg); err != nil {
+	err := env.Parse(&cfg)
+	if err != nil {
 		log.Fatalf("failed to parse environment variables: %v\n", err)
 	}
 
@@ -39,7 +40,7 @@ func GetConfig() *Config {
 		log.Fatal("cannot set both ASSET_WATCHER_EXCLUDE_PROJECTS and ASSET_WATCHER_INCLUDE_PROJECTS at the same time\n")
 	}
 
-	if strings.ToLower(cfg.OutputFormat) != "table" && strings.ToLower(cfg.OutputFormat) != "json" {
+	if strings.ToLower(cfg.OutputFormat) != "table" && strings.ToLower(cfg.OutputFormat) != "json" { // nolint:goconst
 		log.Fatalf("invalid value for ASSET_WATCHER_OUTPUT_FORMAT: %s. "+
 			"Allowed values are 'table' or 'json'\n", cfg.OutputFormat)
 	}

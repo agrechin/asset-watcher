@@ -19,6 +19,7 @@ import (
 // fakeAssetServer is a mock implementation of the AssetServiceServer.
 type fakeAssetServer struct {
 	assetpb.UnimplementedAssetServiceServer
+
 	assetsToServe []*assetpb.ResourceSearchResult // New field to hold assets
 }
 
@@ -56,7 +57,8 @@ func setupFakeAssetServer(t *testing.T, assets []*assetpb.ResourceSearchResult) 
 	assetpb.RegisterAssetServiceServer(gsrv, testServer)
 
 	go func() {
-		if err := gsrv.Serve(l); err != nil {
+		err := gsrv.Serve(l)
+		if err != nil {
 			// Log error from goroutine. In a real test, consider more robust error handling
 			// like an error channel if the test needs to react to server startup failures.
 			log.Printf("setupFakeAssetServer: gsrv.Serve failed: %v", err)
@@ -100,7 +102,8 @@ func TestFetchAssets_WithFakeServer(t *testing.T) {
 	}
 
 	defer func() {
-		if err := fetcher.Close(); err != nil {
+		err := fetcher.Close()
+		if err != nil {
 			t.Errorf("Failed to close fetcher: %v", err)
 		}
 	}()

@@ -57,7 +57,8 @@ func (f *GoogleAssetFetcher) FetchAssets(ctx context.Context) *asset.ResourceSea
 
 // Close closes the asset client.
 func (f *GoogleAssetFetcher) Close() error {
-	if err := f.client.Close(); err != nil {
+	err := f.client.Close()
+	if err != nil {
 		return fmt.Errorf("failed to close asset client: %w", err)
 	}
 

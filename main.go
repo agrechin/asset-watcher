@@ -34,7 +34,8 @@ func main() {
 	}
 
 	defer func() {
-		if err := fetcher.Close(); err != nil {
+		err := fetcher.Close()
+		if err != nil {
 			logger.ErrorContext(ctx, "failed to close asset client", slog.Any("error", err))
 			os.Exit(1)
 		}

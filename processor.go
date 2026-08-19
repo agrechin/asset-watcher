@@ -13,6 +13,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+const missingInfoText = "N/A"
+
 // AssetIterator is an interface for iterating over assets.
 type AssetIterator interface {
 	Next() (*assetpb.ResourceSearchResult, error)
@@ -114,7 +116,8 @@ func (p *AssetProcessor) ProcessAssets(ctx context.Context,
 		}
 	}
 
-	p.logger.DebugContext(ctx, "Finished processing assets",
+	p.logger.DebugContext(
+		ctx, "Finished processing assets",
 		slog.Int("total_assets", totalAssets),
 		slog.Int("total_filtered", totalAssets-len(processedResults)),
 	)
@@ -123,7 +126,7 @@ func (p *AssetProcessor) ProcessAssets(ctx context.Context,
 }
 
 func getIPAddress(asset *assetpb.ResourceSearchResult) string {
-	ipAddress := "N/A"
+	ipAddress := missingInfoText
 
 	isFieldsExists := asset.GetAdditionalAttributes() != nil && asset.GetAdditionalAttributes().GetFields() != nil
 	if !isFieldsExists {
@@ -142,7 +145,7 @@ func getIPAddress(asset *assetpb.ResourceSearchResult) string {
 }
 
 func getProjectID(asset *assetpb.ResourceSearchResult) string {
-	projectID := "N/A"
+	projectID := missingInfoText
 
 	if asset.GetParentAssetType() == "cloudresourcemanager.googleapis.com/Project" {
 		parts := strings.Split(asset.GetParentFullResourceName(), "/")
