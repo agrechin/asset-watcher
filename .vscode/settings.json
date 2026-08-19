@@ -1,0 +1,30 @@
+{
+    "cSpell.words": [
+        "advisorynotifications",
+        "advisorynotificationspb",
+        "apiv",
+        "assetpb",
+        "caarlos",
+        "cloudresourcemanager",
+        "coverprofile",
+        "dominikh",
+        "goarch",
+        "goarm",
+        "golangci",
+        "gomod",
+        "gsrv",
+        "htmltomarkdown",
+        "Kaufmann",
+        "ldflags",
+        "notif",
+        "staticcheck",
+        "structpb",
+        "timestamppb"
+    ],
+    "cSpell.ignorePaths": [
+        ".golangci.yaml",
+        "go.mod",
+        "go.sum",
+        "*.code-workspace",
+    ]
+}

@@ -118,7 +118,8 @@ func runTestExpectingFatal(t *testing.T, testName string, setupFunc func()) {
 
 	// Prepare to run the test in a subprocess
 	cmd := exec.Command(os.Args[0], "-test.run="+testName) //nolint:gosec // Will rerun only the current test function
-	cmd.Env = append(os.Environ(), "BE_FATAL_TESTER=1")    // Set marker for subprocess
+
+	cmd.Env = append(os.Environ(), "BE_FATAL_TESTER=1") // Set marker for subprocess
 
 	// We need to pass through necessary env vars for the test runner itself,
 	// but clear/set specific ASSET_WATCHER_* vars within setupFunc in the subprocess.

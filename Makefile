@@ -32,12 +32,10 @@ fmt: format
 
 lint: fmt
 	go vet ./...
-	staticcheck ./...
 	golangci-lint run --show-stats
 
 vuln:
-	gosec ./...
-	govulncheck
+	govulncheck ./...
 
 cov-integration:
 	rm -fr "${GOCOVERDIR}" && mkdir -p "${GOCOVERDIR}"
