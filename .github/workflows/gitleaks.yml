@@ -15,4 +15,4 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: andreygrechin/github-actions/.github/workflows/gitleaks.yml@main
+    uses: agrechin/github-actions/.github/workflows/gitleaks.yml@main
