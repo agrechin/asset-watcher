@@ -2,15 +2,13 @@
 version: 2
 
 project_name: asset-watcher
+dist: .build/dist
 
 force_token: github
 
 before:
   hooks:
-    - go mod tidy
-    - make lint
-    - make vuln
-    - make test
+    - task check
 
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
@@ -29,9 +27,9 @@ builds:
     ldflags:
       - -s
       - -w
-      - -X {{ .ModulePath }}/internal/config.Version={{ .Version }}
-      - -X {{ .ModulePath }}/internal/config.Commit={{ .Commit }}
-      - -X {{ .ModulePath }}/internal/config.BuildTime={{ .Date }}
+      - -X main.Version={{ .Version }}
+      - -X main.Commit={{ .Commit }}
+      - -X main.BuildTime={{ .Date }}
     ignore:
       - goos: windows
         goarch: arm64
@@ -68,48 +66,51 @@ brews:
   - name: asset-watcher
     ids:
       - default
-    url_template: "https://github.com/andreygrechin/asset-watcher/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    url_template: "https://github.com/agrechin/asset-watcher/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
 
     commit_author:
       name: Andrey Grechin
-      email: 36399892+andreygrechin@users.noreply.github.com
+      email: 36399892+agrechin@users.noreply.github.com
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     directory: Formula
 
-    homepage: "https://github.com/andreygrechin/asset-watcher"
+    homepage: "https://github.com/agrechin/asset-watcher"
     description: &description A command-line utility to fetch a list of IP addresses across a Google Cloud organization through Google Asset API.
     license: &license MIT
-    skip_upload: false
+    skip_upload: '{{ if eq (index .Env "SKIP_HOMEBREW_UPLOAD") "true" }}true{{ else }}false{{ end }}'
 
     test: |
-      system "#{bin}/asset-watcher"
+      ENV.delete("ASSET_WATCHER_ORG_ID")
+      assert_match "ASSET_WATCHER_ORG_ID", shell_output("#{bin}/asset-watcher 2>&1", 1)
 
     repository:
-      owner: andreygrechin
+      owner: agrechin
       name: homebrew-tap
       branch: update-formula-{{ .Tag }}
       pull_request:
         enabled: true
         draft: true
         base:
-          owner: andreygrechin
+          owner: agrechin
           name: homebrew-tap
           branch: main
 
 kos:
   - repositories:
-      - ghcr.io/andreygrechin/asset-watcher
+      - ghcr.io/agrechin/asset-watcher
+    # Local snapshots produce archives without requiring a Docker daemon.
+    disable: '{{ .IsSnapshot }}'
     base_image: alpine:3.21.0
     labels:
-      org.opencontainers.image.source: https://github.com/andreygrechin/asset-watcher
-      org.opencontainers.image.url: https://github.com/andreygrechin/asset-watcher
+      org.opencontainers.image.source: https://github.com/agrechin/asset-watcher
+      org.opencontainers.image.url: https://github.com/agrechin/asset-watcher
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.created: "{{ .CommitTimestamp }}"
       org.opencontainers.image.licenses: *license
       org.opencontainers.image.description: *description
     annotations:
-      org.opencontainers.image.source: https://github.com/andreygrechin/asset-watcher
-      org.opencontainers.image.url: https://github.com/andreygrechin/asset-watcher
+      org.opencontainers.image.source: https://github.com/agrechin/asset-watcher
+      org.opencontainers.image.url: https://github.com/agrechin/asset-watcher
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.created: "{{ .CommitTimestamp }}"
       org.opencontainers.image.licenses: *license
@@ -124,9 +125,9 @@ kos:
     ldflags:
       - -s
       - -w
-      - -X github.com/andreygrechin/asset-watcher/internal/config.Version={{ .Version }}
-      - -X github.com/andreygrechin/asset-watcher/internal/config.BuildTime={{ .CommitTimestamp }}
-      - -X github.com/andreygrechin/asset-watcher/internal/config.Commit="{{ .Commit }}"
+      - -X main.Version={{ .Version }}
+      - -X main.BuildTime={{ .Date }}
+      - -X main.Commit={{ .Commit }}
     bare: true
     preserve_import_paths: false
     platforms:
@@ -178,4 +179,4 @@ release:
   replace_existing_draft: true
   name_template: "asset-watcher v{{ .Version }}"
   footer: |
-    **Full Changelog**: https://github.com/andreygrechin/asset-watcher/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/agrechin/asset-watcher/compare/{{ .PreviousTag }}...{{ .Tag }}

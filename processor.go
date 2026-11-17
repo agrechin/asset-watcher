@@ -44,7 +44,7 @@ func NewAssetProcessor(_ context.Context, logger *slog.Logger, cfg *Config) *Ass
 	}
 }
 
-func splitString(s string, separator string) []string {
+func splitString(s, separator string) []string {
 	if strings.TrimSpace(s) == "" {
 		return []string{}
 	}

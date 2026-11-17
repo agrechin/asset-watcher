@@ -2,92 +2,60 @@
 name: build
 
 on:
-  push:
-    branches: ["main"]
-    tags: ["v*"]
-    paths:
-      - .github/workflows/*.yml
-      - "**/*.go"
-      - go.*
-      - .golangci.yaml
   pull_request:
-    branches: ["main"]
-    paths:
-      - .github/workflows/*.yml
-      - "**/*.go"
-      - go.*
-      - Makefile
-      - .golangci.yaml
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    # Refresh vulnerability checks even when no code has changed.
+    - cron: '45 21 * * FRI'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  golang-security:
-    uses: andreygrechin/github-actions/.github/workflows/golang-security.yml@main
-    permissions:
-      contents: read
-      pull-requests: read
-    with:
-      go-version: "1.24.x"
-
-  lint:
-    permissions:
-      contents: read
-      pull-requests: read
+  check:
+    name: task check
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ["1.24.x"]
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version-file: go.mod
 
-      - name: go vet
-        run: go vet ./...
-
-      - uses: dominikh/staticcheck-action@v1
+      - name: Cache golangci-lint data
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          install-go: false
-          version: latest
+          path: ~/.cache/golangci-lint
+          key: golangci-lint-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum', '.golangci.yaml', '.github/workflows/build.yml') }}
+          restore-keys: |
+            golangci-lint-${{ runner.os }}-
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+      - name: Install Task
+        uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2.2.0
         with:
-          version: v2.1.6
-          args: --show-stats
+          version: 3.x
+          repo-token: ${{ github.token }}
 
-  build:
-    permissions:
-      contents: read
-      pull-requests: read
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ["1.24.x"]
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          go-version: ${{ matrix.go-version }}
+          version: v2.15.0
+          install-only: true
 
-      - name: Install dependencies
-        run: |
-          go get .
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
 
-      - name: Build
-        run: |
-          make build
-
-      - name: Test
-        run: go test -coverprofile=coverage.txt -v ./...
-
-    # - name: Upload coverage reports to Codecov
-    #   uses: codecov/codecov-action@v5
-    #   with:
-    #     token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Verify
+        run: task check

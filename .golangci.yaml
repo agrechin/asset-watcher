@@ -9,67 +9,92 @@ run:
 linters:
   default: all
   disable:
-    - depguard
+    # Build metadata and configuration defaults are package-level values.
     - gochecknoglobals
-    - exhaustruct
+    - varnamelen
+    - funlen
+    - depguard
     - wsl
+    - noinlineerr
+    - exhaustruct
+    - cyclop
+    - testpackage
+    - wrapcheck
     - gomodguard
+    - gomodguard_v2
+    - err113
+    - exhaustruct_v5
+    # - nonamedreturns
   settings:
+    lll:
+      line-length: 140
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocritic:
+      enable-all: true
+      disabled-checks:
+        - unnamedResult
+      disabled-tags:
+        - performance
     paralleltest:
       ignore-missing: true
       ignore-missing-subtests: true
-
+    misspell:
+      locale: US
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
   exclusions:
     generated: lax
-    warn-unused: true
-    # presets:
-    #   - comments
-    #   - common-false-positives
-    #   - legacy
-    #   - std-error-handling
+    warn-unused: false
     rules:
-      - linters:
-          - varnamelen
-        text: is too short for the scope of its usage
+      # CLI output is intentionally written to stdout by this file.
       - linters:
           - forbidigo
-        text: forbidden by pattern
+        path: ^output\.go$
       - linters:
           - revive
-        text: should have comment or be unexported
-      - linters:
-          - lll
-        text: characters long, which exceeds the maximum of
-        path: "^.*_test\\.go$"
-      - linters:
-          - cyclop
-        text: calculated cyclomatic complexity for function
-        path: "^.*_test\\.go$"
-      - linters:
-          - funlen
-        text: is too long
-        path: "^.*_test\\.go$"
+        text: "package-comments: should have a package comment"
       - linters:
           - gocognit
-        text: is high
-        path: "^.*_test\\.go$"
+        text: "cognitive complexity"
       - linters:
-          - maintidx
-        path: "^.*_test\\.go$"
-      - linters:
+          - dupl
+          - errcheck
           - goconst
-        path: "^.*_test\\.go$"
-
+          - golines
+          - gosec
+          - lll
+          - maintidx
+        path: _test\.go
+    paths:
+      - vendor
+      - examples$
 formatters:
+  settings:
+    gci:
+      sections:
+        - standard # Standard section: captures all standard packages.
+        - default # Default section: contains all imports that could not be matched to another section type.
+        # - prefix(github.com/org/project) # Custom section: groups all imports with the specified Prefix.
+        # - blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
+        # - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
+        # - alias # Alias section: contains all alias imports. This section is not present unless explicitly enabled.
+        - localmodule # Local module section: contains all local packages. This section is not present unless explicitly enabled.
+    golines:
+      max-len: 140
+      shorten-comments: true
   enable:
     - gci
-    - gofmt
+    # - gofmt
     - gofumpt
-    - goimports
-    # - golines
+    # - goimports
+    - golines
+    # - swaggo
   exclusions:
     generated: lax
-    # paths:
-    #   - third_party$
-    #   - builtin$
-    #   - examples$
+    paths:
+      - vendor
+      - examples$

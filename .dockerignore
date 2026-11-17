@@ -1,0 +1,13 @@
+.git
+.githooks
+.build
+.task
+.env
+.env.*
+.DS_Store
+.vscode
+bin
+dist
+covdatafiles
+coverage.out
+vendor

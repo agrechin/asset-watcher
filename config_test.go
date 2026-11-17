@@ -117,7 +117,7 @@ func runTestExpectingFatal(t *testing.T, testName string, setupFunc func()) {
 	}
 
 	// Prepare to run the test in a subprocess
-	cmd := exec.Command(os.Args[0], "-test.run="+testName) //nolint:gosec // Will rerun only the current test function
+	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run="+testName)
 
 	cmd.Env = append(os.Environ(), "BE_FATAL_TESTER=1") // Set marker for subprocess
 
@@ -146,7 +146,11 @@ func runTestExpectingFatal(t *testing.T, testName string, setupFunc func()) {
 	}
 
 	// If we reach here, cmd.Run() succeeded (exit code 0) or had an unexpected error.
-	t.Fatalf("%s: GetConfig did not call log.Fatalf as expected. Process exited cleanly or with an unexpected error. Output: %s", testName, output)
+	t.Fatalf(
+		"%s: GetConfig did not call log.Fatalf as expected. Process exited cleanly or with an unexpected error. Output: %s",
+		testName,
+		output,
+	)
 }
 
 func TestGetConfig_MissingRequiredEnv(t *testing.T) {

@@ -23,11 +23,21 @@ func TestSplitString(t *testing.T) {
 	}{
 		{name: "empty string", s: "", separator: ",", want: []string{}},
 		{name: "string with no separators", s: "abc", separator: ",", want: []string{"abc"}},
-		{name: "string with leading/trailing spaces and spaces around separators", s: "  abc  ,  def  ,ghi,jkl  ", separator: ",", want: []string{"abc", "def", "ghi", "jkl"}},
+		{
+			name:      "string with leading/trailing spaces and spaces around separators",
+			s:         "  abc  ,  def  ,ghi,jkl  ",
+			separator: ",",
+			want:      []string{"abc", "def", "ghi", "jkl"},
+		},
 		{name: "string with multiple separators", s: "abc,,def", separator: ",", want: []string{"abc", "def"}},
 		{name: "string with only separators", s: ",,,", separator: ",", want: []string{}},
 		{name: "string with different separator", s: "abc;def;ghi", separator: ";", want: []string{"abc", "def", "ghi"}},
-		{name: "string with multiple character separator", s: "abc<sep>def<sep>ghi", separator: "<sep>", want: []string{"abc", "def", "ghi"}},
+		{
+			name:      "string with multiple character separator",
+			s:         "abc<sep>def<sep>ghi",
+			separator: "<sep>",
+			want:      []string{"abc", "def", "ghi"},
+		},
 		{name: "empty string with spaces", s: "   ", separator: ",", want: []string{}},
 		{name: "separator at the beginning", s: ",abc,def", separator: ",", want: []string{"abc", "def"}},
 		{name: "separator at the end", s: "abc,def,", separator: ",", want: []string{"abc", "def"}},
@@ -48,12 +58,44 @@ func TestGetIPAddress(t *testing.T) {
 		asset *assetpb.ResourceSearchResult
 		want  string
 	}{
-		{name: "asset with IP address", asset: &assetpb.ResourceSearchResult{AdditionalAttributes: &structpb.Struct{Fields: map[string]*structpb.Value{"address": structpb.NewStringValue("192.168.1.1")}}}, want: "192.168.1.1"},
-		{name: "asset with no address field", asset: &assetpb.ResourceSearchResult{AdditionalAttributes: &structpb.Struct{Fields: map[string]*structpb.Value{"other_field": structpb.NewStringValue("some_value")}}}, want: "N/A"},
-		{name: "asset with address field not a string", asset: &assetpb.ResourceSearchResult{AdditionalAttributes: &structpb.Struct{Fields: map[string]*structpb.Value{"address": structpb.NewNumberValue(123)}}}, want: "N/A"},
+		{
+			name: "asset with IP address",
+			asset: &assetpb.ResourceSearchResult{
+				AdditionalAttributes: &structpb.Struct{
+					Fields: map[string]*structpb.Value{"address": structpb.NewStringValue("192.168.1.1")},
+				},
+			},
+			want: "192.168.1.1",
+		},
+		{
+			name: "asset with no address field",
+			asset: &assetpb.ResourceSearchResult{
+				AdditionalAttributes: &structpb.Struct{
+					Fields: map[string]*structpb.Value{"other_field": structpb.NewStringValue("some_value")},
+				},
+			},
+			want: "N/A",
+		},
+		{
+			name: "asset with address field not a string",
+			asset: &assetpb.ResourceSearchResult{
+				AdditionalAttributes: &structpb.Struct{Fields: map[string]*structpb.Value{"address": structpb.NewNumberValue(123)}},
+			},
+			want: "N/A",
+		},
 		{name: "asset with nil AdditionalAttributes", asset: &assetpb.ResourceSearchResult{AdditionalAttributes: nil}, want: "N/A"},
-		{name: "asset with nil Fields in AdditionalAttributes", asset: &assetpb.ResourceSearchResult{AdditionalAttributes: &structpb.Struct{Fields: nil}}, want: "N/A"},
-		{name: "asset with address field being nil structpb.Value", asset: &assetpb.ResourceSearchResult{AdditionalAttributes: &structpb.Struct{Fields: map[string]*structpb.Value{"address": nil}}}, want: "N/A"},
+		{
+			name:  "asset with nil Fields in AdditionalAttributes",
+			asset: &assetpb.ResourceSearchResult{AdditionalAttributes: &structpb.Struct{Fields: nil}},
+			want:  "N/A",
+		},
+		{
+			name: "asset with address field being nil structpb.Value",
+			asset: &assetpb.ResourceSearchResult{
+				AdditionalAttributes: &structpb.Struct{Fields: map[string]*structpb.Value{"address": nil}},
+			},
+			want: "N/A",
+		},
 	}
 
 	for _, tt := range tests {
@@ -71,12 +113,54 @@ func TestGetProjectID(t *testing.T) {
 		asset *assetpb.ResourceSearchResult
 		want  string
 	}{
-		{name: "asset with correct project ID", asset: &assetpb.ResourceSearchResult{ParentAssetType: "cloudresourcemanager.googleapis.com/Project", ParentFullResourceName: "//cloudresourcemanager.googleapis.com/projects/my-project-123"}, want: "my-project-123"},
-		{name: "asset with different parent asset type", asset: &assetpb.ResourceSearchResult{ParentAssetType: "compute.googleapis.com/Instance", ParentFullResourceName: "//cloudresourcemanager.googleapis.com/projects/another-project-456"}, want: "N/A"},
-		{name: "asset with project parent type but empty resource name", asset: &assetpb.ResourceSearchResult{ParentAssetType: "cloudresourcemanager.googleapis.com/Project", ParentFullResourceName: ""}, want: ""},
-		{name: "asset with project parent type but malformed resource name (no slashes)", asset: &assetpb.ResourceSearchResult{ParentAssetType: "cloudresourcemanager.googleapis.com/Project", ParentFullResourceName: "my-project-malformed"}, want: "my-project-malformed"},
-		{name: "asset with project parent type but resource name is just slashes", asset: &assetpb.ResourceSearchResult{ParentAssetType: "cloudresourcemanager.googleapis.com/Project", ParentFullResourceName: "//"}, want: ""},
-		{name: "asset with project parent type, resource name ends with slash", asset: &assetpb.ResourceSearchResult{ParentAssetType: "cloudresourcemanager.googleapis.com/Project", ParentFullResourceName: "//cloudresourcemanager.googleapis.com/projects/project-ending-slash/"}, want: ""},
+		{
+			name: "asset with correct project ID",
+			asset: &assetpb.ResourceSearchResult{
+				ParentAssetType:        "cloudresourcemanager.googleapis.com/Project",
+				ParentFullResourceName: "//cloudresourcemanager.googleapis.com/projects/my-project-123",
+			},
+			want: "my-project-123",
+		},
+		{
+			name: "asset with different parent asset type",
+			asset: &assetpb.ResourceSearchResult{
+				ParentAssetType:        "compute.googleapis.com/Instance",
+				ParentFullResourceName: "//cloudresourcemanager.googleapis.com/projects/another-project-456",
+			},
+			want: "N/A",
+		},
+		{
+			name: "asset with project parent type but empty resource name",
+			asset: &assetpb.ResourceSearchResult{
+				ParentAssetType:        "cloudresourcemanager.googleapis.com/Project",
+				ParentFullResourceName: "",
+			},
+			want: "",
+		},
+		{
+			name: "asset with project parent type but malformed resource name (no slashes)",
+			asset: &assetpb.ResourceSearchResult{
+				ParentAssetType:        "cloudresourcemanager.googleapis.com/Project",
+				ParentFullResourceName: "my-project-malformed",
+			},
+			want: "my-project-malformed",
+		},
+		{
+			name: "asset with project parent type but resource name is just slashes",
+			asset: &assetpb.ResourceSearchResult{
+				ParentAssetType:        "cloudresourcemanager.googleapis.com/Project",
+				ParentFullResourceName: "//",
+			},
+			want: "",
+		},
+		{
+			name: "asset with project parent type, resource name ends with slash",
+			asset: &assetpb.ResourceSearchResult{
+				ParentAssetType:        "cloudresourcemanager.googleapis.com/Project",
+				ParentFullResourceName: "//cloudresourcemanager.googleapis.com/projects/project-ending-slash/",
+			},
+			want: "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -349,11 +433,11 @@ func TestProcessAssets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			processor := NewAssetProcessor(ctx, logger, tt.config)
-			iterator := &mockAssetIterator{
+			assetIterator := &mockAssetIterator{
 				assets: tt.assets,
 			}
 
-			results, err := processor.ProcessAssets(ctx, iterator)
+			results, err := processor.ProcessAssets(ctx, assetIterator)
 			if err != nil {
 				t.Fatalf("ProcessAssets failed: %v", err)
 			}
@@ -408,14 +492,14 @@ func TestProcessAssets_Error(t *testing.T) {
 	}
 
 	processor := NewAssetProcessor(ctx, logger, config)
-	iterator := &mockAssetIterator{
+	assetIterator := &mockAssetIterator{
 		assets: []*assetpb.ResourceSearchResult{
 			createTestAsset("asset1", "proj-A", "ACTIVE", "1.2.3.4", time.Now()),
 		},
 		err: errSimulatedAPI,
 	}
 
-	_, err := processor.ProcessAssets(ctx, iterator)
+	_, err := processor.ProcessAssets(ctx, assetIterator)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}

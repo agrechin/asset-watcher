@@ -1,0 +1,224 @@
+---
+# https://taskfile.dev
+version: "3"
+
+dotenv: ['.env']
+
+vars:
+  # Keep local tools, CI, and container builds on the go.mod toolchain.
+  GO_TOOLCHAIN:
+    sh: awk '$1 == "go" { print "go" $2; exit }' go.mod
+  # Prefix commands so an exported GOTOOLCHAIN cannot override this choice.
+  GO_ENV: 'GOTOOLCHAIN={{.GO_TOOLCHAIN}}'
+  MODULE:
+    sh: awk '$1 == "module" { print $2; exit }' go.mod
+  APP_NAME: '{{base .MODULE}}'
+  BUILD_ROOT: .build
+  BUILD_DIR: '{{.BUILD_ROOT}}/bin'
+  COVERAGE_DIR: '{{.BUILD_ROOT}}/coverage'
+  DIST_DIR: '{{.BUILD_ROOT}}/dist'
+  RUNTIME_COVERAGE_DIR: '{{.COVERAGE_DIR}}/runtime'
+  RUNTIME_COVERAGE_BINARY: '{{.BUILD_DIR}}/{{.APP_NAME}}-cover'
+  # All GoReleaser archive and container targets, including linux/arm64 in ko.
+  VULNERABILITY_SCAN_TARGETS: [darwin/amd64, darwin/arm64, linux/amd64, linux/arm64, windows/amd64]
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+  COMMIT:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo none
+  BUILDTIME:
+    sh: date -u '+%Y-%m-%dT%H:%M:%SZ'
+  LDFLAGS: >-
+    -X main.Version={{.VERSION}}
+    -X main.Commit={{.COMMIT}}
+    -X main.BuildTime={{.BUILDTIME}}
+
+tasks:
+  default:
+    desc: Run the development cycle (format + fast checks + build)
+    aliases: [dev]
+    cmds:
+      - task: format
+      - task: check:fast
+      - task: build
+
+  check:fast:
+    desc: Run fast verification (lint + unit tests)
+    cmds:
+      - task: lint
+      - task: test
+
+  check:
+    desc: Run the full CI and pre-push gate
+    cmds:
+      - task: check:fast
+      - task: test:race
+      - task: security
+      - task: build
+
+  hooks:install:
+    desc: Enable the versioned pre-push hook that runs task check
+    cmds:
+      - git config core.hooksPath .githooks
+
+  build:
+    desc: Build the application
+    aliases: ['go:build']
+    cmds:
+      - mkdir -p {{.BUILD_DIR}}
+      - CGO_ENABLED=0 {{.GO_ENV}} go build -ldflags "-s -w {{.LDFLAGS}}" -o {{.BUILD_DIR}}/{{.APP_NAME}} .
+
+  build:cover:
+    desc: Build an instrumented binary for runtime coverage
+    cmds:
+      - mkdir -p {{.BUILD_DIR}} {{.COVERAGE_DIR}}
+      - >-
+        CGO_ENABLED=0 {{.GO_ENV}} go build -cover -coverpkg=./...
+        -ldflags "-s -w {{.LDFLAGS}}" -o {{.RUNTIME_COVERAGE_BINARY}} .
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf {{.BUILD_ROOT}}
+
+  docker:build:
+    desc: Run the verification gate and build a local container image
+    cmds:
+      - task: check
+      - >-
+        docker build
+        --build-arg GO_VERSION={{trimPrefix "go" .GO_TOOLCHAIN}}
+        --build-arg VERSION={{.VERSION}}
+        --build-arg COMMIT={{.COMMIT}}
+        --build-arg BUILDTIME={{.BUILDTIME}}
+        -t {{.APP_NAME}} .
+
+  release:check:
+    desc: Validate the GoReleaser configuration
+    cmds:
+      - '{{.GO_ENV}} goreleaser check'
+
+  release:snapshot:
+    desc: Build a snapshot without publishing (artifacts in .build/dist)
+    cmds:
+      - '{{.GO_ENV}} goreleaser release --snapshot --clean --skip=publish'
+
+  release:
+    desc: Build a release draft locally from a clean tagged checkout
+    preconditions:
+      - sh: test -z "$(git status --porcelain)"
+        msg: Commit or stash changes before publishing a release.
+      - sh: git describe --tags --exact-match HEAD
+        msg: Check out the release tag before publishing.
+    cmds:
+      # GoReleaser's before hook runs the same task check gate.
+      - '{{.GO_ENV}} goreleaser release --clean'
+
+  run:
+    desc: Build and run the application
+    deps: [build]
+    cmds:
+      - ./{{.BUILD_DIR}}/{{.APP_NAME}}
+
+  run:cover:
+    desc: Run the instrumented binary and write runtime coverage data
+    deps: ['build:cover']
+    cmds:
+      - mkdir -p {{.RUNTIME_COVERAGE_DIR}}
+      - GOCOVERDIR={{.RUNTIME_COVERAGE_DIR}} ./{{.RUNTIME_COVERAGE_BINARY}}
+
+  test:
+    desc: Run unit tests
+    aliases: ['go:test']
+    cmds:
+      - '{{.GO_ENV}} go test ./...'
+
+  test:race:
+    desc: Run unit tests with race detection
+    aliases: ['go:test:race']
+    cmds:
+      - '{{.GO_ENV}} go test -race ./...'
+
+  test:all:
+    desc: Run all tests (unit + race)
+    aliases: ['go:test:all']
+    cmds:
+      - task: test
+      - task: test:race
+
+  test:cover:
+    desc: Run tests with summary and HTML coverage reports
+    aliases: ['go:test:cover']
+    cmds:
+      - mkdir -p {{.COVERAGE_DIR}}
+      - '{{.GO_ENV}} go test -coverprofile={{.COVERAGE_DIR}}/coverage.out ./...'
+      - '{{.GO_ENV}} go tool cover -html={{.COVERAGE_DIR}}/coverage.out -o {{.COVERAGE_DIR}}/coverage.html'
+      - '{{.GO_ENV}} go tool cover -func={{.COVERAGE_DIR}}/coverage.out'
+
+  cover:runtime:
+    desc: Convert runtime coverage data into summary and HTML reports
+    cmds:
+      - '{{.GO_ENV}} go tool covdata percent -i={{.RUNTIME_COVERAGE_DIR}}'
+      - '{{.GO_ENV}} go tool covdata textfmt -i={{.RUNTIME_COVERAGE_DIR}} -o {{.COVERAGE_DIR}}/runtime.out'
+      - '{{.GO_ENV}} go tool cover -html={{.COVERAGE_DIR}}/runtime.out -o {{.COVERAGE_DIR}}/runtime.html'
+
+  format:
+    desc: Format Go code and apply linter fixes
+    aliases: [fmt, 'go:format']
+    cmds:
+      - '{{.GO_ENV}} golangci-lint run --show-stats --fix ./...'
+      - '{{.GO_ENV}} golangci-lint fmt ./...'
+
+  lint:
+    desc: Run golangci-lint with the shared Go lint policy
+    aliases: ['go:lint']
+    cmds:
+      - >-
+        {{.GO_ENV}} golangci-lint run --show-stats
+        --max-issues-per-linter 0 --max-same-issues 0 ./...
+
+  security:
+    desc: Run Go security checks (gosec + govulncheck)
+    aliases: [sec, 'go:security']
+    cmds:
+      - task: security:gosec
+      - task: security:vuln
+
+  security:gosec:
+    desc: Run gosec through golangci-lint
+    cmds:
+      - '{{.GO_ENV}} golangci-lint run --enable-only gosec ./...'
+
+  security:vuln:
+    desc: Run govulncheck for every release target in parallel
+    # Keep failfast off so every target reports even when another fails.
+    deps:
+      - for: {var: VULNERABILITY_SCAN_TARGETS}
+        task: security:vuln:target
+        vars:
+          TARGET: '{{.ITEM}}'
+
+  security:vuln:target:
+    internal: true
+    label: 'security:vuln:{{.TARGET}}'
+    silent: true
+    vars:
+      GOOS: '{{index (splitList "/" .TARGET) 0}}'
+      GOARCH: '{{index (splitList "/" .TARGET) 1}}'
+    cmds:
+      # Match release build constraints and buffer each target's report so
+      # parallel scans produce readable output without hiding exit statuses.
+      - |
+        rc=0
+        report=$(CGO_ENABLED=0 GOOS={{.GOOS}} GOARCH={{.GOARCH}} {{.GO_ENV}} govulncheck ./... 2>&1) || rc=$?
+        printf '==> govulncheck %s\n%s\n' '{{.TARGET}}' "$report"
+        exit $rc
+
+  deps:
+    desc: Download dependencies
+    cmds:
+      - '{{.GO_ENV}} go mod download'
+
+  tidy:
+    desc: Tidy go.mod
+    cmds:
+      - '{{.GO_ENV}} go mod tidy'

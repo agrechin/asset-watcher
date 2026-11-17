@@ -13,9 +13,9 @@ const tabWriterPadding = 3
 
 func outputToStdOut(ctx context.Context, logger *slog.Logger, processedAssets []ProcessedAsset, outputFormat string) {
 	switch outputFormat {
-	case "table":
+	case outputFormatTable:
 		outputToStdOutTable(ctx, logger, processedAssets)
-	case "json":
+	case outputFormatJSON:
 		outputToStdOutJSON(ctx, logger, processedAssets)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown output format: %s\n", outputFormat)

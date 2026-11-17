@@ -1,0 +1,3 @@
+#!/bin/sh
+# Install with `task hooks:install` to use the same gate as hosted CI.
+exec task check

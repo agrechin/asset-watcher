@@ -25,7 +25,10 @@ type fakeAssetServer struct {
 
 // SearchAllResources is a mock implementation of the SearchAllResources RPC.
 // It now returns the assets stored in s.assetsToServe.
-func (s *fakeAssetServer) SearchAllResources(_ context.Context, _ *assetpb.SearchAllResourcesRequest) (*assetpb.SearchAllResourcesResponse, error) {
+func (s *fakeAssetServer) SearchAllResources(
+	_ context.Context,
+	_ *assetpb.SearchAllResourcesRequest,
+) (*assetpb.SearchAllResourcesResponse, error) {
 	log.Println("fakeAssetServer.SearchAllResources called")
 
 	response := &assetpb.SearchAllResourcesResponse{
@@ -46,7 +49,9 @@ func setupFakeAssetServer(t *testing.T, assets []*assetpb.ResourceSearchResult) 
 		assetsToServe: assets,
 	}
 
-	l, err := net.Listen("tcp", "localhost:0")
+	var listenConfig net.ListenConfig
+
+	l, err := listenConfig.Listen(t.Context(), "tcp", "localhost:0")
 	if err != nil {
 		t.Fatalf("setupFakeAssetServer: failed to listen: %v", err)
 	}
@@ -141,7 +146,11 @@ func TestFetchAssets_WithFakeServer(t *testing.T) {
 			}
 
 			if asset.GetParentFullResourceName() != expectedAssets[0].GetParentFullResourceName() {
-				t.Errorf("expected ParentFullResourceName '%s', got '%s'", expectedAssets[0].GetParentFullResourceName(), asset.GetParentFullResourceName())
+				t.Errorf(
+					"expected ParentFullResourceName '%s', got '%s'",
+					expectedAssets[0].GetParentFullResourceName(),
+					asset.GetParentFullResourceName(),
+				)
 			}
 		case len(expectedAssets) == 0 && assetsFound > 0:
 			t.Errorf("expected 0 assets, but found some.")

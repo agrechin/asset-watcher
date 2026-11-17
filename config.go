@@ -7,6 +7,11 @@ import (
 	env "github.com/caarlos0/env/v11"
 )
 
+const (
+	outputFormatTable = "table"
+	outputFormatJSON  = "json"
+)
+
 // Config represents the configuration structure.
 type Config struct {
 	OrgID           string `env:"ASSET_WATCHER_ORG_ID,required,notEmpty"`
@@ -21,7 +26,7 @@ type Config struct {
 var ConfigDefaults = Config{
 	OrgID:           "",
 	Debug:           false,
-	OutputFormat:    "table",
+	OutputFormat:    outputFormatTable,
 	ExcludeReserved: false,
 	ExcludeProjects: "",
 	IncludeProjects: "",
@@ -40,7 +45,7 @@ func GetConfig() *Config {
 		log.Fatal("cannot set both ASSET_WATCHER_EXCLUDE_PROJECTS and ASSET_WATCHER_INCLUDE_PROJECTS at the same time\n")
 	}
 
-	if strings.ToLower(cfg.OutputFormat) != "table" && strings.ToLower(cfg.OutputFormat) != "json" { // nolint:goconst
+	if strings.ToLower(cfg.OutputFormat) != outputFormatTable && strings.ToLower(cfg.OutputFormat) != outputFormatJSON {
 		log.Fatalf("invalid value for ASSET_WATCHER_OUTPUT_FORMAT: %s. "+
 			"Allowed values are 'table' or 'json'\n", cfg.OutputFormat)
 	}
